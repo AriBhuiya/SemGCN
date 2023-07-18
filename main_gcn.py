@@ -114,11 +114,14 @@ def main(args):
         if path.isfile(ckpt_path):
             print("==> Loading checkpoint '{}'".format(ckpt_path))
             ckpt = torch.load(ckpt_path)
+            # weights = ckpt['state_dict']
+            # for key, value in weights.items():
+            #     print(key)
             start_epoch = ckpt['epoch']
             error_best = ckpt['error']
             glob_step = ckpt['step']
             lr_now = ckpt['lr']
-            model_pos.load_state_dict(ckpt['state_dict'])
+            model_pos.load_state_dict(ckpt['state_dict'], strict=False)
             optimizer.load_state_dict(ckpt['optimizer'])
             print("==> Loaded checkpoint (Epoch: {} | Error: {})".format(start_epoch, error_best))
 

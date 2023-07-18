@@ -1,0 +1,11 @@
+.idea/
+.code/
+*.npz
+checkpoint/
+env/
+*.gif
+common/__pycache__/
+progress/__pycache__/
+models/__pycache__/
+*.gz
+*.zip

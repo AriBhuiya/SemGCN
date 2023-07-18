@@ -5,7 +5,7 @@ from torch import Tensor
 
 
 class GraphConvolution(nn.Module):
-    def __init__(self, input_dim, output_dim, adj:torch.Tensor):
+    def __init__(self, input_dim, output_dim, adj: torch.Tensor):
         super().__init__()
         self.linear = nn.Linear(input_dim, output_dim)
         self.adj = adj.to('cuda')
@@ -20,7 +20,6 @@ class GraphConvolution(nn.Module):
 
 
 def scaled_dot_product_attention(query: Tensor, key: Tensor, value: Tensor) -> Tensor:
-
     temp = query.bmm(key.transpose(1, 2))
     scale = query.size(-1) ** 0.5
     softmax = f.softmax(temp / scale, dim=-1)
@@ -35,13 +34,12 @@ class AttentionHead(nn.Module):
         self.v = nn.Linear(dim_in, dim_k)
         # print('1------------------', dim_in, dim_q, dim_k) # 16, 4 , 4
 
-
     def forward(self, query: Tensor, key: Tensor, value: Tensor) -> Tensor:
         # print('0------------------', query.shape, key.shape, value.shape) # 64, 16, 8 all three
         q = self.q(query)
         k = self.k(key)
         v = self.v(value)
-        return scaled_dot_product_attention(q, k ,v)
+        return scaled_dot_product_attention(q, k, v)
 
 
 class MultiHeadAttention(nn.Module):
@@ -81,11 +79,11 @@ class Residual(nn.Module):
 
 class TransformerEncoderLayer(nn.Module):
     def __init__(
-        self,
-        dim_model: int = 512,
-        num_heads: int = 6,
-        dim_feedforward: int = 2048,
-        dropout: float = 0.1,
+            self,
+            dim_model: int = 512,
+            num_heads: int = 6,
+            dim_feedforward: int = 2048,
+            dropout: float = 0.1,
     ):
         super().__init__()
         dim_q = dim_k = max(dim_model // num_heads, 1)
@@ -107,12 +105,12 @@ class TransformerEncoderLayer(nn.Module):
 
 class TransformerEncoder(nn.Module):
     def __init__(
-        self,
-        num_layers: int = 6,
-        dim_model: int = 8,
-        num_heads: int = 2,
-        dim_feedforward: int = 128,
-        dropout: float = 0.1,
+            self,
+            num_layers: int = 6,
+            dim_model: int = 8,
+            num_heads: int = 2,
+            dim_feedforward: int = 128,
+            dropout: float = 0.1,
     ):
         super().__init__()
         self.layers = nn.ModuleList(

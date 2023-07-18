@@ -5,6 +5,7 @@ from models.sem_graph_conv import SemGraphConv
 from models.graph_non_local import GraphNonLocal
 from models.myarc import GraphConvolution, TransformerEncoder
 
+
 class _GraphConv(nn.Module):
     def __init__(self, adj, input_dim, output_dim, p_dropout=None):
         super(_GraphConv, self).__init__()
@@ -60,7 +61,7 @@ class _GraphNonLocal(nn.Module):
 class SemGCN(nn.Module):
     def __init__(self, adj, hid_dim, coords_dim=(2, 3), num_layers=4, nodes_group=None, p_dropout=None):
         super(SemGCN, self).__init__()
-
+        num_layers = 4
         # Remove nonlocal layer
         nodes_group = None
         _gconv_input = [_GraphConv(adj, coords_dim[0], hid_dim, p_dropout=p_dropout)]
@@ -92,18 +93,24 @@ class SemGCN(nn.Module):
         self.gconv_output = GraphConvolution(hid_dim, 8, adj)
 
         # Transformer
-        self.transformer_enc = TransformerEncoder()
+        trans_dim_model = 8
+        self.transformer_enc = TransformerEncoder(num_layers=6, dim_model=trans_dim_model, num_heads=2,
+                                                  dim_feedforward=128,
+                                                  dropout=0.1, )
 
-        self.final_layer = nn.Linear(8, 3)
-        # self.final_layer = GraphConvolution(8, 3, adj)
-
+        self.final_layer = nn.Linear(trans_dim_model, 3)
+        # self.final_layer = GraphConvolution(trans_dim_model, 3, adj)
+        self. res_linear = nn.Linear(2, trans_dim_model)
 
     def forward(self, x):
         # print(x.shape)
+        # shape here is 64, 16, 2
         out = self.gconv_input(x)
         out = self.gconv_layers(out)
         out = self.gconv_output(out)
-
+        x2 = self.res_linear(x)
+        out = x2 + out
+        # shape here is 64, 16, 8
         # transformer begin here
         out = self.transformer_enc(out)
         # print(out.shape)

@@ -4,22 +4,6 @@ from torch.nn import functional as f
 from torch import Tensor
 
 
-# class ResidualConverter(nn.Module):
-#     def __init__(self, in_dims, out_dims, extras=True):
-#         super(ResidualConverter, self).__init__()
-#         self.linear = nn.Linear(in_dims, out_dims)
-#         self.relu = nn.ReLU()
-#         self.batchnorm = nn.BatchNorm1d(out_dims)
-#         self.extras = extras
-#
-#     def forward(self, x):
-#         x = self.linear(x).transpose(1,2)
-#         if not self.extras:
-#             return x.transpose(1, 2)
-#         x = self.batchnorm(x).transpose(1,2)
-#         x = self.relu(x)
-#         return x
-
 class ResidualConverter(nn.Module):
     def __init__(self, in_dims, out_dims, extras=True):
         super(ResidualConverter, self).__init__()
@@ -147,6 +131,29 @@ class TransformerEncoder(nn.Module):
     def forward(self, src: Tensor, residuals:list = None) -> Tensor:
         # seq_len, dimension = src.size(1), src.size(2)
         for i, layer in enumerate(self.layers):
-            r = residuals[len(residuals) - i - 1]
-            src = layer(src + r)
+            # r = residuals[len(residuals) - i - 1]
+            # src = layer(src + r)
+            src = layer(src)
+        return src
+
+
+
+class JustAttentionLayer(nn.Module):
+    def __init__(
+            self,
+            dim_model: int = 512,
+            num_heads: int = 6,
+            dim_feedforward: int = 2048,
+            dropout: float = 0.1,
+    ):
+        super().__init__()
+        dim_q = dim_k = max(dim_model // num_heads, 1)
+        self.attention = Residual(
+            MultiHeadAttention(num_heads, dim_model, dim_q, dim_k),
+            dimension=dim_model,
+            dropout=dropout,
+        )
+
+    def forward(self, src: Tensor) -> Tensor:
+        src = self.attention(src, src, src)
         return src

@@ -3,7 +3,7 @@ from functools import reduce
 import torch.nn as nn
 from models.sem_graph_conv import SemGraphConv
 from models.graph_non_local import GraphNonLocal
-from models.myarc import GraphConvolution, TransformerEncoder
+from models.myarc import GraphConvolution, TransformerEncoder, ResidualConverter
 
 
 class _GraphConv(nn.Module):
@@ -61,7 +61,7 @@ class _GraphNonLocal(nn.Module):
 class SemGCN(nn.Module):
     def __init__(self, adj, hid_dim, coords_dim=(2, 3), num_layers=4, nodes_group=None, p_dropout=None):
         super(SemGCN, self).__init__()
-        num_layers = 4
+        num_layers = 5
         # Remove nonlocal layer
         nodes_group = None
         _gconv_input = [_GraphConv(adj, coords_dim[0], hid_dim, p_dropout=p_dropout)]
@@ -88,31 +88,40 @@ class SemGCN(nn.Module):
                 _gconv_layers.append(_GraphNonLocal(hid_dim, grouped_order, restored_order, group_size))
 
         self.gconv_input = nn.Sequential(*_gconv_input)
-        self.gconv_layers = nn.Sequential(*_gconv_layers)
+
+        # uncomment below if you want no residual
+        # self.gconv_layers = nn.Sequential(*_gconv_layers)
+        self.gconv_layers = nn.ModuleList(_gconv_layers)
         # self.gconv_output = GraphConvolution(hid_dim, coords_dim[1], adj)
         self.gconv_output = GraphConvolution(hid_dim, 8, adj)
 
         # Transformer
         trans_dim_model = 8
-        self.transformer_enc = TransformerEncoder(num_layers=6, dim_model=trans_dim_model, num_heads=2,
+        self.transformer_enc = TransformerEncoder(num_layers=5, dim_model=trans_dim_model, num_heads=2,
                                                   dim_feedforward=128,
                                                   dropout=0.1, )
 
         self.final_layer = nn.Linear(trans_dim_model, 3)
         # self.final_layer = GraphConvolution(trans_dim_model, 3, adj)
-        self. res_linear = nn.Linear(2, trans_dim_model)
+        self.res_linear = nn.Linear(2, trans_dim_model)
+        self.res_graph_to_transformer_linear = ResidualConverter(hid_dim, trans_dim_model, extras=False)
 
     def forward(self, x):
         # print(x.shape)
         # shape here is 64, 16, 2
         out = self.gconv_input(x)
-        out = self.gconv_layers(out)
+        #out = self.gconv_layers(out)
+        residual_outputs = []
+        for layer in self.gconv_layers:
+            residual_outputs.append(self.res_graph_to_transformer_linear(out))
+            out = layer(out)
+
         out = self.gconv_output(out)
         x2 = self.res_linear(x)
         out = x2 + out
         # shape here is 64, 16, 8
         # transformer begin here
-        out = self.transformer_enc(out)
+        out = self.transformer_enc(out, residual_outputs)
         # print(out.shape)
         out = self.final_layer(out)
 

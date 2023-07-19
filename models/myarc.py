@@ -4,6 +4,30 @@ from torch.nn import functional as f
 from torch import Tensor
 
 
+# class ResidualConverter(nn.Module):
+#     def __init__(self, in_dims, out_dims, extras=True):
+#         super(ResidualConverter, self).__init__()
+#         self.linear = nn.Linear(in_dims, out_dims)
+#         self.relu = nn.ReLU()
+#         self.batchnorm = nn.BatchNorm1d(out_dims)
+#         self.extras = extras
+#
+#     def forward(self, x):
+#         x = self.linear(x).transpose(1,2)
+#         if not self.extras:
+#             return x.transpose(1, 2)
+#         x = self.batchnorm(x).transpose(1,2)
+#         x = self.relu(x)
+#         return x
+
+class ResidualConverter(nn.Module):
+    def __init__(self, in_dims, out_dims, extras=True):
+        super(ResidualConverter, self).__init__()
+        self.pool = nn.MaxPool1d(kernel_size=16, stride = 16)
+
+    def forward(self, x):
+        return self.pool(x)
+
 class GraphConvolution(nn.Module):
     def __init__(self, input_dim, output_dim, adj: torch.Tensor):
         super().__init__()
@@ -120,8 +144,9 @@ class TransformerEncoder(nn.Module):
             ]
         )
 
-    def forward(self, src: Tensor) -> Tensor:
+    def forward(self, src: Tensor, residuals:list = None) -> Tensor:
         # seq_len, dimension = src.size(1), src.size(2)
-        for layer in self.layers:
-            src = layer(src)
+        for i, layer in enumerate(self.layers):
+            r = residuals[len(residuals) - i - 1]
+            src = layer(src + r)
         return src

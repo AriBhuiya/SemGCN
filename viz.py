@@ -84,11 +84,11 @@ def main(args):
         model_pos = LinearModel(num_joints * 2, (num_joints - 1) * 3).to(device)
         model_pos.apply(init_weights)
     elif args.architecture == 'gcn':
-        from models.sem_gcn import SemGCN
+        from models.sem_gcn2 import SemGCN2
         from common.graph_utils import adj_mx_from_skeleton
         p_dropout = (None if args.dropout == 0.0 else args.dropout)
         adj = adj_mx_from_skeleton(dataset.skeleton())
-        model_pos = SemGCN(adj, args.hid_dim, num_layers=args.num_layers, p_dropout=p_dropout,
+        model_pos = SemGCN2(adj, args.hid_dim, num_layers=args.num_layers, p_dropout=p_dropout,
                            nodes_group=dataset.skeleton().joints_group() if args.non_local else None).to(device)
     else:
         raise KeyError('Invalid model architecture')

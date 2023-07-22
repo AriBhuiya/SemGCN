@@ -2,7 +2,7 @@ from torch import nn as nn
 import torch
 from torch.nn import functional as f
 from torch import Tensor
-
+from models.sem_graph_conv import SemGraphConv
 
 class ResidualConverter(nn.Module):
     def __init__(self, in_dims, out_dims, extras=True):
@@ -85,6 +85,20 @@ class Residual(nn.Module):
         return self.norm(tensors[0] + self.dropout(self.sublayer(*tensors)))
 
 
+class Residual2(nn.Module):
+    def __init__(self, sublayer: nn.Module, dimension: int, dropout: float = 0.1):
+        super().__init__()
+        self.sublayer = sublayer
+        self.norm = nn.LayerNorm(dimension)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, *tensors: Tensor) -> Tensor:
+        # Assume that the "query" tensor is given first, so we can compute the
+        # residual.  This matches the signature of 'MultiHeadAttention'.
+        # return x + self.dropout(sublayer(self.norm(x)))
+        # return self.norm(tensors[0] + self.dropout(self.sublayer(*tensors)))
+        return tensors[0] + self.dropout(self.sublayer(self.norm(*tensors)))
+
 class TransformerEncoderLayer(nn.Module):
     def __init__(
             self,
@@ -157,3 +171,36 @@ class JustAttentionLayer(nn.Module):
     def forward(self, src: Tensor) -> Tensor:
         src = self.attention(src, src, src)
         return src
+
+
+class ModifiedTransformerEncoderLayer(nn.Module):
+    def __init__(
+            self,
+            adj,
+            dim_model: int = 512,
+            num_heads: int = 6,
+            dim_feedforward: int = 2048,
+            dropout: float = 0.1,
+    ):
+        super().__init__()
+        dim_q = dim_k = max(dim_model // num_heads, 1)
+        self.attention = Residual(
+            MultiHeadAttention(num_heads, dim_model, dim_q, dim_k),
+            dimension=dim_model,
+            dropout=dropout,
+        )
+        # self.feed_forward = Residual(
+        #     feed_forward(dim_model, dim_feedforward),
+        #     dimension=dim_model,
+        #     dropout=dropout,
+        # )
+
+        self.gcn = Residual(
+            SemGraphConv(dim_model, dim_model, adj),
+            dimension=dim_model,
+            dropout=dropout,
+        )
+
+    def forward(self, src: Tensor) -> Tensor:
+        src = self.attention(src, src, src)
+        return self.gcn(src)

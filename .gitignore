@@ -7,5 +7,6 @@ env/
 common/__pycache__/
 progress/__pycache__/
 models/__pycache__/
+models/mlp_mixer_pytorch/__pycache__/
 *.gz
 *.zip

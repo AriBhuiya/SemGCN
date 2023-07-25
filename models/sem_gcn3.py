@@ -3,7 +3,7 @@ from functools import reduce
 import torch.nn as nn
 from models.sem_graph_conv import SemGraphConv
 from models.graph_non_local import GraphNonLocal
-from models.myarc import GraphConvolution, TransformerEncoder, ResidualConverter, JustAttentionLayer, ModifiedTransformerEncoderLayer
+from models.myarc import GraphConvolution, TransformerEncoder, ResidualConverter, JustAttentionLayer, ModifiedTransformerEncoderLayer, TransformerEncoderLayerWithMixer
 
 
 class _GraphConv(nn.Module):
@@ -58,48 +58,55 @@ class _GraphNonLocal(nn.Module):
         return out
 
 
-class SemGCN2(nn.Module):
+class SemGCN3(nn.Module):
     def __init__(self, adj, hid_dim, coords_dim=(2, 3), num_layers=4, nodes_group=None, p_dropout=None):
-        super(SemGCN2, self).__init__()
+        super(SemGCN3, self).__init__()
         num_layers = 4
         # Remove nonlocal layer
         nodes_group = None
-        _gconv_input = [_GraphConv(adj, coords_dim[0], hid_dim, p_dropout=p_dropout)]
-        _gconv_layers = []
+        dim_model = 256
+        self.dim_model = dim_model
+        mlp_feed_forward = 512
+        
 
-        for i in range(num_layers):
-            _gconv_layers.append(_ResGraphConv(adj, hid_dim, hid_dim, hid_dim, p_dropout=p_dropout))
-            # _gconv_layers.append(TransformerEncoder(num_layers=1, dim_model=128, num_heads=4,
-            #                                       dim_feedforward=256,
-            #                                       dropout=0.1, ))
-            # _gconv_layers.append(JustAttentionLayer(dim_model=128, num_heads=4,
-            #                                       dim_feedforward=256,
-            #                                       dropout=0.1, ))ModifiedTransformerEncoderLayer
-            _gconv_layers.append(ModifiedTransformerEncoderLayer(adj, dim_model=128, num_heads=4,
-                                                  dim_feedforward=256,
-                                                  dropout=0.1, ))
-            # _gconv_input.append(_GraphNonLocal(hid_dim, grouped_order, restored_order, group_size))
-                
+        self.input_layer = nn.Sequential(
+            nn.Linear(coords_dim[0], dim_model),
+            nn.LayerNorm(dim_model),
+            nn.ReLU())
 
-        self.gconv_input = nn.Sequential(*_gconv_input)
+        # blocks = []
+        # for _ in range(num_layers):
+        #     blocks.append(TransformerEncoderLayerWithMixer(dim_model=dim_model, num_heads=4,
+        #                                           dim_feedforward=512,
+        #                                           dropout=0.1)
+        #     )
+        
+        
+        self.layers = nn.ModuleList([
+            TransformerEncoderLayerWithMixer(dim_model=dim_model, num_heads=4,
+                                                  dim_feedforward=mlp_feed_forward,
+                                                  dropout=0.1) for _ in range(num_layers)
+        ])
+        # self.layers = TransformerEncoderLayerWithMixer(dim_model=dim_model, num_heads=4,
+        #                                           dim_feedforward=mlp_feed_forward,
+        #                                           dropout=0.1)
+        self.trans_shape = nn.Sequential(
+            nn.Linear(mlp_feed_forward, dim_model * 16),
+            nn.LayerNorm(dim_model * 16),
+            nn.ReLU()
+        )
+        self.gconv_output = nn.Linear(dim_model, coords_dim[1])
 
-        # uncomment below if you want no residual
-        self.gconv_layers = nn.Sequential(*_gconv_layers)
-        # self.gconv_layers = nn.ModuleList(_gconv_layers)
-        self.gconv_output = GraphConvolution(hid_dim, coords_dim[1], adj)
-        # self.gconv_output = GraphConvolution(hid_dim, 8, adj)
 
     def forward(self, x):
         # print(x.shape)
         # shape here is 64, 16, 2
-        out = self.gconv_input(x)
-        out = self.gconv_layers(out)
-        # residual_outputs = []
-        # for layer in self.gconv_layers:
-        #     residual_outputs.append(self.res_graph_to_transformer_linear(out))
-        #     out = layer(out)
-
+        out = self.input_layer(x)
+        for layer in self.layers:
+            out = layer(out)
+            out = self.trans_shape(out)
+            out = out.reshape(-1, 16, self.dim_model )
+            # print(out.shape)
         out = self.gconv_output(out)
-        
-
+        # out = out.reshape(-1, 16, 3)
         return out

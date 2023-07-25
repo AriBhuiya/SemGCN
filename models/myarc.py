@@ -3,6 +3,7 @@ import torch
 from torch.nn import functional as f
 from torch import Tensor
 from models.sem_graph_conv import SemGraphConv
+from models.mlp_mixer_pytorch.mlp_mixer_pytorch import MLPMixer
 
 class ResidualConverter(nn.Module):
     def __init__(self, in_dims, out_dims, extras=True):
@@ -204,3 +205,38 @@ class ModifiedTransformerEncoderLayer(nn.Module):
     def forward(self, src: Tensor) -> Tensor:
         src = self.attention(src, src, src)
         return self.gcn(src)
+
+
+
+class TransformerEncoderLayerWithMixer(nn.Module):
+    def __init__(
+            self,
+            dim_model: int = 512,
+            num_heads: int = 6,
+            dim_feedforward: int = 2048,
+            dropout: float = 0.1,
+    ):
+        super().__init__()
+        dim_q = dim_k = max(dim_model // num_heads, 1)
+
+        self.dim_model = dim_model
+        
+
+        self.attention = Residual(
+            MultiHeadAttention(num_heads, dim_model, dim_q, dim_k),
+            dimension=dim_model,
+            dropout=dropout,
+        )
+        self.feed_forward = MLPMixer(
+                image_size = 16,
+                channels = 16,
+                patch_size = 2,
+                dim = dim_feedforward,
+                depth = 2,
+                num_classes = 1000
+            )
+
+    def forward(self, src: Tensor) -> Tensor:
+        src = self.attention(src, src, src)
+        src = src.reshape(-1, 16, 16, 16)
+        return self.feed_forward(src)

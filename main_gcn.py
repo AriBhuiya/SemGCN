@@ -21,7 +21,7 @@ from common.generators import PoseGenerator
 from common.loss import mpjpe, p_mpjpe
 from models.sem_gcn import SemGCN
 from models.sem_gcn2 import SemGCN2
-from models.sem_gcn3 import SemGCN3
+from models.sem_gcn4 import SemGCN4
 
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch training script')
@@ -101,7 +101,7 @@ def main(args):
 
     p_dropout = (None if args.dropout == 0.0 else args.dropout)
     adj = adj_mx_from_skeleton(dataset.skeleton())
-    model_pos = SemGCN3(adj, args.hid_dim, num_layers=args.num_layers, p_dropout=p_dropout,
+    model_pos = SemGCN4(adj, args.hid_dim, num_layers=args.num_layers, p_dropout=p_dropout,
                        nodes_group=dataset.skeleton().joints_group() if args.non_local else None).to(device)
     print("==> Total parameters: {:.2f}M".format(sum(p.numel() for p in model_pos.parameters()) / 1000000.0))
 

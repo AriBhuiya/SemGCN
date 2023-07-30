@@ -62,9 +62,9 @@ class SemGCN4(nn.Module):
     def __init__(self, adj, hid_dim, coords_dim=(2, 3), num_layers=4, nodes_group=None, p_dropout=None):
         super(SemGCN4, self).__init__()
         num_layers = 4
-        dim_model = 64
+        dim_model = 256
         self.dim_model = dim_model
-        dim_feedforward = 1024
+        dim_feedforward = 4096
         self.dim_feedforward = dim_feedforward
 
         self.input_layer = nn.Sequential(
@@ -75,7 +75,7 @@ class SemGCN4(nn.Module):
         self.mixer = MLPMixer(
             image_size= int(dim_model ** 0.5),
             channels=16,
-            patch_size=2,
+            patch_size=16,
             dim=dim_feedforward,
             depth=5,
             num_classes=1000
@@ -87,13 +87,14 @@ class SemGCN4(nn.Module):
     def forward(self, x):
         # print(x.shape)
         # shape here is 64, 16, 2
-        out = self.input_layer(x) # 64X16X4
+        out_layer1 = self.input_layer(x) # 64X16X4
         # print(out.shape)
-        out = out.reshape(-1, 16, int(self.dim_model**0.5), int(self.dim_model**0.5))
+        out = out_layer1.reshape(-1, 16, int(self.dim_model**0.5), int(self.dim_model**0.5))
         # print(out.shape)
         out = self.mixer(out) # 64 X 1024
         # print(out.shape)
         out = out.reshape(-1, 16, self.dim_feedforward // 16)
+        out +=out_layer1
         out = self.output(out)
         # rearrange to 64X 16 X 3
         # print(out.shape)

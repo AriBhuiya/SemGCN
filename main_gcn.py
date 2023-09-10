@@ -22,6 +22,13 @@ from common.loss import mpjpe, p_mpjpe
 from models.sem_gcn import SemGCN
 from models.sem_gcn2 import SemGCN2
 from models.sem_gcn4 import SemGCN4
+from models.sem_gcn5 import SemGCN5
+from models.sem_gcn6 import SemGCN6
+from models.sem_gcn7 import SemGCN7
+from models.sem_gcn8 import SemGCN8
+from models.sem_gcn10 import SemGCN10
+from models.sem_gcn11 import SemGCN11
+from models.sem_gcn12 import SemGCN12
 
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch training script')
@@ -101,7 +108,10 @@ def main(args):
 
     p_dropout = (None if args.dropout == 0.0 else args.dropout)
     adj = adj_mx_from_skeleton(dataset.skeleton())
-    model_pos = SemGCN4(adj, args.hid_dim, num_layers=args.num_layers, p_dropout=p_dropout,
+    # print('==============', type(adj))
+    # for row in adj:
+    #     print(row)
+    model_pos = SemGCN12(adj, args.hid_dim, num_layers=args.num_layers, p_dropout=p_dropout,
                        nodes_group=dataset.skeleton().joints_group() if args.non_local else None).to(device)
     print("==> Total parameters: {:.2f}M".format(sum(p.numel() for p in model_pos.parameters()) / 1000000.0))
 
@@ -155,12 +165,13 @@ def main(args):
         errors_p2 = np.zeros(len(action_filter))
 
         for i, action in enumerate(action_filter):
+            print('\n Evaluating on ', action)
             poses_valid, poses_valid_2d, actions_valid = fetch(subjects_test, dataset, keypoints, [action], stride)
             valid_loader = DataLoader(PoseGenerator(poses_valid, poses_valid_2d, actions_valid),
                                       batch_size=args.batch_size, shuffle=False,
                                       num_workers=args.num_workers, pin_memory=True)
             errors_p1[i], errors_p2[i] = evaluate(valid_loader, model_pos, device)
-
+        
         print('Protocol #1   (MPJPE) action-wise average: {:.2f} (mm)'.format(np.mean(errors_p1).item()))
         print('Protocol #2 (P-MPJPE) action-wise average: {:.2f} (mm)'.format(np.mean(errors_p2).item()))
         exit(0)

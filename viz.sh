@@ -1,0 +1,1 @@
+python viz.py --architecture gcn --non_local --evaluate checkpoint/2023-08-22T02:21:50.476018/ckpt_best.pth.tar --viz_subject S11 --viz_action Walking --viz_camera 0 --viz_output output4.gif --viz_size 3 --viz_downsample 2 --viz_limit 60

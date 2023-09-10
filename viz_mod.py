@@ -103,14 +103,13 @@ def main(args):
         ckpt = torch.load(ckpt_path)
         start_epoch = ckpt['epoch']
         error_best = ckpt['error']
-        model_pos.load_state_dict(ckpt['state_dict'], strict=False)
+        model_pos.load_state_dict(ckpt['state_dict'])
         print("==> Loaded checkpoint (Epoch: {} | Error: {})".format(start_epoch, error_best))
     else:
         raise RuntimeError("==> No checkpoint found at '{}'".format(ckpt_path))
 
     print('==> Rendering...')
-    # x = keypoints[args.viz_subject]
-    # print(x.keys())
+
     poses_2d = keypoints[args.viz_subject][args.viz_action]
     out_poses_2d = poses_2d[args.viz_camera]
     out_actions = [args.viz_camera] * out_poses_2d.shape[0]
@@ -134,7 +133,8 @@ def main(args):
     ground_truth = camera_to_world(ground_truth, R=cam['orientation'], t=0)
     ground_truth[:, :, 2] -= np.min(ground_truth[:, :, 2])
 
-    anim_output = {'3-D Prediction': prediction, 'Ground truth': ground_truth}
+    anim_output = {' ': prediction, '   ': ground_truth}
+    #anim_output = {'Regression': prediction, 'Ground truth': ground_truth}
     input_keypoints = image_coordinates(input_keypoints[..., :2], w=cam['res_w'], h=cam['res_h'])
     render_animation(input_keypoints, anim_output, dataset.skeleton(), dataset.fps(), args.viz_bitrate, cam['azimuth'],
                      args.viz_output, limit=args.viz_limit, downsample=args.viz_downsample, size=args.viz_size,

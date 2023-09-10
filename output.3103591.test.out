@@ -1,0 +1,93 @@
+/home/acq22ab/.conda/envs/pytorch/lib/python3.9/site-packages/torch/utils/data/dataloader.py:560: UserWarning: This DataLoader will create 8 worker processes in total. Our suggested max number of worker in current system is 1, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(_create_warning_msg(
+==> Using settings Namespace(dataset='h36m', keypoints='gt', actions='*', evaluate='', resume='', checkpoint='checkpoint', snapshot=5, num_layers=4, hid_dim=128, batch_size=64, epochs=40, num_workers=8, lr=0.001, lr_decay=100000, lr_gamma=0.96, max_norm=True, non_local=True, dropout=0.1, downsample=1)
+==> Loading dataset...
+==> Preparing data...
+==> Loading 2D detections...
+==> Creating model...
+--- 2 hops. No transformers. No Non Local Layer
+==> Total parameters: 0.53M
+==> Making checkpoint dir: checkpoint/2023-08-25T11:58:41.428156
+Generating 1559752 poses...
+Generating 543344 poses...
+
+Epoch: 1 | LR: 0.00100000
+
+Epoch: 2 | LR: 0.00100000
+
+Epoch: 3 | LR: 0.00100000
+
+Epoch: 4 | LR: 0.00100000
+
+Epoch: 5 | LR: 0.00100000
+
+Epoch: 6 | LR: 0.00096000
+
+Epoch: 7 | LR: 0.00096000
+
+Epoch: 8 | LR: 0.00096000
+
+Epoch: 9 | LR: 0.00096000
+
+Epoch: 10 | LR: 0.00092160
+
+Epoch: 11 | LR: 0.00092160
+
+Epoch: 12 | LR: 0.00092160
+
+Epoch: 13 | LR: 0.00092160
+
+Epoch: 14 | LR: 0.00088474
+
+Epoch: 15 | LR: 0.00088474
+
+Epoch: 16 | LR: 0.00088474
+
+Epoch: 17 | LR: 0.00088474
+
+Epoch: 18 | LR: 0.00084935
+
+Epoch: 19 | LR: 0.00084935
+
+Epoch: 20 | LR: 0.00084935
+
+Epoch: 21 | LR: 0.00084935
+
+Epoch: 22 | LR: 0.00081537
+
+Epoch: 23 | LR: 0.00081537
+
+Epoch: 24 | LR: 0.00081537
+
+Epoch: 25 | LR: 0.00081537
+
+Epoch: 26 | LR: 0.00078276
+
+Epoch: 27 | LR: 0.00078276
+
+Epoch: 28 | LR: 0.00078276
+
+Epoch: 29 | LR: 0.00078276
+
+Epoch: 30 | LR: 0.00075145
+
+Epoch: 31 | LR: 0.00075145
+
+Epoch: 32 | LR: 0.00075145
+
+Epoch: 33 | LR: 0.00075145
+
+Epoch: 34 | LR: 0.00072139
+
+Epoch: 35 | LR: 0.00072139
+
+Epoch: 36 | LR: 0.00072139
+
+Epoch: 37 | LR: 0.00072139
+
+Epoch: 38 | LR: 0.00069253
+
+Epoch: 39 | LR: 0.00069253
+
+Epoch: 40 | LR: 0.00069253
+The PostScript backend does not support transparency; partially transparent artists will be rendered opaque.

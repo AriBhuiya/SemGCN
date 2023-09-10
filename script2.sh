@@ -13,4 +13,4 @@ module load Anaconda3/5.3.0
 module load cuDNN/7.6.4.38-gcccuda-2019b
 source activate pytorch
 
-python main_gcn.py --keypoints gt --dropout 0.1 --non_local --epochs 40
+python main_gcn.py --keypoints cpn_ft_h36m_dbb --dropout 0.1

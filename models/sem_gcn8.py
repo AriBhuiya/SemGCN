@@ -3,6 +3,7 @@ from functools import reduce
 import torch.nn as nn
 from models.sem_graph_conv import SemGraphConv
 from models.graph_non_local import GraphNonLocal
+from models.myarc import GraphConvolution, TransformerEncoder, ResidualConverter, JustAttentionLayer, ModifiedTransformerEncoderLayer, GraphFormerLikeAttention
 
 
 class _GraphConv(nn.Module):
@@ -10,6 +11,7 @@ class _GraphConv(nn.Module):
         super(_GraphConv, self).__init__()
 
         self.gconv = SemGraphConv(input_dim, output_dim, adj)
+        # self.gconv = GraphConvolution(input_dim, output_dim, adj)
         self.bn = nn.BatchNorm1d(output_dim)
         self.relu = nn.ReLU()
 
@@ -31,7 +33,6 @@ class _GraphConv(nn.Module):
 class _ResGraphConv(nn.Module):
     def __init__(self, adj, input_dim, output_dim, hid_dim, p_dropout):
         super(_ResGraphConv, self).__init__()
-
         self.gconv1 = _GraphConv(adj, input_dim, hid_dim, p_dropout)
         self.gconv2 = _GraphConv(adj, hid_dim, output_dim, p_dropout)
 
@@ -45,7 +46,6 @@ class _ResGraphConv(nn.Module):
 class _GraphNonLocal(nn.Module):
     def __init__(self, hid_dim, grouped_order, restored_order, group_size):
         super(_GraphNonLocal, self).__init__()
-
         self.nonlocal1 = GraphNonLocal(hid_dim, sub_sample=group_size)
         self.grouped_order = grouped_order
         self.restored_order = restored_order
@@ -57,39 +57,36 @@ class _GraphNonLocal(nn.Module):
         return out
 
 
-class SemGCN(nn.Module):
+class SemGCN8(nn.Module):
     def __init__(self, adj, hid_dim, coords_dim=(2, 3), num_layers=4, nodes_group=None, p_dropout=None):
-        super(SemGCN, self).__init__()
-        nodes_group = None
-        _gconv_input = [_GraphConv(adj, coords_dim[0], hid_dim, p_dropout=p_dropout)]
-        _gconv_layers = []
+        super(SemGCN8, self).__init__()
+        num_layers = 2
+        num_heads = 4
+        dim_model=128
 
-        if nodes_group is None:
-            for i in range(num_layers):
-                _gconv_layers.append(_ResGraphConv(adj, hid_dim, hid_dim, hid_dim, p_dropout=p_dropout))
-        else:
-            group_size = len(nodes_group[0])
-            assert group_size > 1
+        adj_n, adj_s = adj
 
-            grouped_order = list(reduce(lambda x, y: x + y, nodes_group))
-            restored_order = [0] * len(grouped_order)
-            for i in range(len(restored_order)):
-                for j in range(len(grouped_order)):
-                    if grouped_order[j] == i:
-                        restored_order[i] = j
-                        break
+        self.inputblock = _GraphConv(adj_s, coords_dim[0], dim_model, p_dropout)
+        self.semgcn_res_blocks = _ResGraphConv(adj_s, dim_model, dim_model, dim_model, p_dropout)
+        self.attn_block = GraphFormerLikeAttention(num_heads, 128, dropout = 0.1)
+        self.output_block = SemGraphConv(dim_model, coords_dim[1], adj_s, bias=True )
 
-            _gconv_input.append(_GraphNonLocal(hid_dim, grouped_order, restored_order, group_size))
-            for i in range(num_layers):
-                _gconv_layers.append(_ResGraphConv(adj, hid_dim, hid_dim, hid_dim, p_dropout=p_dropout))
-                _gconv_layers.append(_GraphNonLocal(hid_dim, grouped_order, restored_order, group_size))
+        middle_layers = []
 
-        self.gconv_input = nn.Sequential(*_gconv_input)
-        self.gconv_layers = nn.Sequential(*_gconv_layers)
-        self.gconv_output = SemGraphConv(hid_dim, coords_dim[1], adj)
+        for layer in range(num_layers):
+            middle_layers.append(self.attn_block)
+            middle_layers.append(self.semgcn_res_blocks)
+
+        self.middle_block = nn.Sequential(*middle_layers)
+       
+
 
     def forward(self, x):
-        out = self.gconv_input(x)
-        out = self.gconv_layers(out)
-        out = self.gconv_output(out)
+        # print(x.shape)
+        # shape here is 64, 16, 2
+        out = self.inputblock(x)
+        out = self.middle_block(out)
+        out = self.attn_block(out)
+        out = self.output_block(out)
+
         return out

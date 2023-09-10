@@ -2,7 +2,7 @@ from torch import nn as nn
 import torch
 from torch.nn import functional as f
 from torch import Tensor
-from models.sem_graph_conv import SemGraphConv
+from models.sem_graph_conv import SemGraphConv3, SemGraphConv5
 from models.mlp_mixer_pytorch.mlp_mixer_pytorch import MLPMixer
 
 class ResidualConverter(nn.Module):
@@ -190,14 +190,9 @@ class ModifiedTransformerEncoderLayer(nn.Module):
             dimension=dim_model,
             dropout=dropout,
         )
-        # self.feed_forward = Residual(
-        #     feed_forward(dim_model, dim_feedforward),
-        #     dimension=dim_model,
-        #     dropout=dropout,
-        # )
 
         self.gcn = Residual(
-            SemGraphConv(dim_model, dim_model, adj),
+            SemGraphConv5(dim_model, dim_model, adj),
             dimension=dim_model,
             dropout=dropout,
         )
@@ -240,3 +235,61 @@ class TransformerEncoderLayerWithMixer(nn.Module):
         src = self.attention(src, src, src)
         src = src.reshape(-1, 16, 16, 16)
         return self.feed_forward(src)
+
+
+class GraphConvolution2(nn.Module):
+    """
+    Simple GCN layer, similar to https://arxiv.org/abs/1609.02907
+    """
+
+    def __init__(self, in_features, out_features, bias=True, dropout = 0.1, is_last=False):
+        super(GraphConvolution2, self).__init__()
+        self.in_features = in_features
+        # self.adj = adj.to('cuda')
+        self.dropout = dropout
+        self.out_features = out_features
+        self.weight = nn.Parameter(torch.FloatTensor(in_features, out_features))
+        if bias:
+            self.bias = nn.Parameter(torch.FloatTensor(out_features))
+        else:
+            self.register_parameter('bias', None)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        torch.nn.init.xavier_uniform_(self.weight)
+        if self.bias is not None:
+            torch.nn.init.zeros_(self.bias)
+
+    def forward(self, x, adj):
+        support = torch.einsum('bik,kj->bij', x, self.weight)  # Modified here
+        output = torch.einsum('ii,bij->bij', adj, support)  # Modified here
+
+        if self.bias is not None:
+            return output + self.bias.unsqueeze(0)  # Modified here to add an extra dimension
+        else:
+            return output
+        
+        
+    
+
+
+    def __repr__(self):
+        return self.__class__.__name__ + ' (' \
+               + str(self.in_features) + ' -> ' \
+               + str(self.out_features) + ')'
+
+
+class GraphFormerLikeAttention(nn.Module):
+    def __init__(self, num_heads, dim_model:int, dropout = 0.1):
+        super(GraphFormerLikeAttention, self).__init__()
+        self.norm = nn.LayerNorm(dim_model)
+        dim_q = dim_k = max(dim_model // num_heads, 1)
+        self.attn = JustAttentionLayer(dim_model = dim_model, num_heads = num_heads, dropout = dropout)
+        self.dropout = nn.Dropout(dropout)
+
+    
+    def forward(self, x):
+        out = self.norm(x)
+        out = self.attn(out)
+        out = self.dropout(out)
+        return x + out

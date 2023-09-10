@@ -1,0 +1,14 @@
+==> Using settings Namespace(dataset='h36m', keypoints='cpn_ft', actions='*', evaluate='', resume='', checkpoint='checkpoint', snapshot=5, num_layers=4, hid_dim=128, batch_size=64, epochs=40, num_workers=8, lr=0.001, lr_decay=100000, lr_gamma=0.96, max_norm=True, non_local=True, dropout=0.1, downsample=1)
+==> Loading dataset...
+==> Preparing data...
+==> Loading 2D detections...
+Traceback (most recent call last):
+  File "/home/acq22ab/SemGCN/main_gcn.py", line 301, in <module>
+    main(parse_args())
+  File "/home/acq22ab/SemGCN/main_gcn.py", line 95, in main
+    keypoints = create_2d_data(path.join('data', 'data_2d_' + args.dataset + '_' + args.keypoints + '.npz'), dataset)
+  File "/home/acq22ab/SemGCN/common/data_utils.py", line 9, in create_2d_data
+    keypoints = np.load(data_path, allow_pickle=True)
+  File "/home/acq22ab/.conda/envs/pytorch/lib/python3.9/site-packages/numpy/lib/npyio.py", line 427, in load
+    fid = stack.enter_context(open(os_fspath(file), "rb"))
+FileNotFoundError: [Errno 2] No such file or directory: 'data/data_2d_h36m_cpn_ft.npz'
